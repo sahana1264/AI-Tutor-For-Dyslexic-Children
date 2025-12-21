@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Handwriting Analysis Results</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+  </style>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'primary': '#4f46e5',
+            'primary-light': '#6366f1',
+            'success': '#10b981',
+            'error': '#ef4444',
+            'warning': '#f59e0b',
+          },
+        },
+      }
+    }
+  </script>
+</head>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    // Start the timer only once (when session first starts)
+    if (!sessionStorage.getItem("sessionStartTime")) {
+        sessionStorage.setItem("sessionStartTime", Date.now());
+    }
+    startGlobalTimer();
+});
+
+function startGlobalTimer() {
+    const LIMIT = 25 * 60; // 25 minutes
+
+    setInterval(() => {
+        const start = parseInt(sessionStorage.getItem("sessionStartTime"));
+        const elapsed = Math.floor((Date.now() - start) / 1000);
+        const remaining = LIMIT - elapsed;
+
+        // Optional: Show timer if element exists on page
+        const display = document.getElementById("timer-display");
+        if (display) {
+            const min = Math.floor(remaining / 60);
+            const sec = remaining % 60;
+            display.textContent = `⏳ Time Left: ${min}:${sec.toString().padStart(2, '0')}`;
+        }
+
+        // When time finishes
+        if (remaining <= 0) {
+            sessionStorage.removeItem("sessionStartTime");
+            alert("⏰ Practice Time Over! Redirecting...");
+            window.location.href = "/home";  // Or "/login"
+        }
+    }, 1000);
+}
+</script>
+<div id="timer-display" class="text-center font-semibold text-red-600 mb-3"></div>
+<body class="bg-gray-50 min-h-screen p-4 flex justify-center items-start">
+
+  <!-- Container -->
+   
+
+  <div class="container w-full max-w-2xl mt-8 bg-white p-6 md:p-8 rounded-xl shadow-2xl border border-gray-100">
+    
+    <h2 class="text-3xl font-extrabold text-primary text-center mb-6 border-b pb-3">
+      Practice Session Results
+    </h2>
+
+    <!-- Inject Flask Variables -->
+    <script>
+      const reversedLetters = JSON.parse('{{ reversed_letters | tojson | safe }}');
+      const currentLevel = '{{ chosen_level | default("unknown") }}';
+      const annotatedImageBase64 = '{{ annotated_image | default("") }}';
+      const ocrText = '{{ ocr_text | default("N/A") }}';
+      const spellingErrors = '{{ spelling_errors | default(0) }}';
+      const reversalStats = '{{ stats | default("N/A") }}';
+      const matches_target = "{{ matches_target | lower | default('false') }}" === "true";
+      const feedbackMessage = `{{ feedback | safe }}`;
+    </script>
+
+    <!-- Results Summary -->
+    <div class="space-y-4 mb-8">
+      
+      <!-- OCR -->
+      <div class="bg-indigo-50 p-3 rounded-lg border-l-4 border-primary shadow-sm">
+        <p class="text-sm text-gray-600 font-medium">OCR Text (What the AI Read):</p>
+        <p id="ocr-text" class="text-lg font-semibold text-gray-800 break-words"></p>
+      </div>
+
+      <!-- Spelling & Reversal Stats -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div class="bg-yellow-50 p-3 rounded-lg border-l-4 border-warning shadow-sm">
+          <p class="text-sm text-gray-600 font-medium">Spelling Errors:</p>
+          <p id="spelling-errors" class="text-xl font-bold text-warning"></p>
+        </div>
+
+        <div class="bg-gray-100 p-3 rounded-lg border-l-4 border-gray-400 shadow-sm">
+          <p class="text-sm text-gray-600 font-medium">Reversal Counts:</p>
+          <pre id="reversal-stats" class="text-sm font-semibold text-gray-700 whitespace-pre-wrap break-words"></pre>
+        </div>
+      </div>
+
+      <!-- Reversed Letters -->
+      <div id="reversed-letters-box" class="p-3 rounded-lg border-l-4 shadow-md">
+        <p class="text-lg font-bold">
+          <span class="font-medium text-sm block">Reversed Letters Detected:</span>
+          <span id="reversed-letters-list" class="text-xl"></span>
+        </p>
+      </div>
+
+      <!-- Level -->
+      <div class="grid grid-cols-1 gap-4">
+        <div class="bg-white p-3 rounded-lg border border-gray-200 shadow-sm text-center">
+          <p class="text-xs text-gray-500 font-medium">Chosen Level</p>
+          <p id="chosen-level" class="text-xl font-bold text-gray-700 uppercase"></p>
+        </div>
+      </div>
+
+      <!-- Match Message -->
+      <div id="match-message" class="p-4 rounded-lg font-bold text-center"></div>
+    </div>
+
+
+    <!-- ⭐ NEW FEEDBACK SECTION -->
+    <div class="bg-purple-50 border-l-4 border-primary p-4 rounded-lg shadow-md mb-6">
+      <h3 class="text-xl font-bold text-primary mb-2">Your Feedback</h3>
+      <p id="feedback-box" class="text-gray-700 whitespace-pre-line"></p>
+    </div>
+    <!-- END FEEDBACK SECTION -->
+
+
+    <!-- Annotated Image -->
+    <h3 class="text-xl font-semibold text-gray-700 text-center mb-4 pt-4 border-t">Annotated Handwriting</h3>
+    <img id="annotated-image" src="" alt="Annotated Handwriting" 
+         class="w-full h-auto rounded-lg shadow-lg ring-4 ring-primary-light/30 transition-shadow duration-300" />
+
+
+    <!-- Buttons -->
+    <div class="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-4 mt-8">
+      <button id="flashcard-btn"
+        class="flex items-center justify-center bg-warning hover:bg-yellow-600 text-white font-bold py-3 px-6 rounded-full transition duration-300 shadow-lg transform hover:scale-[1.02]">
+        Go to Flashcards
+      </button>
+
+      <a href="/index" 
+         class="flex items-center justify-center bg-primary hover:bg-primary-light text-white font-bold py-3 px-6 rounded-full transition duration-300 shadow-lg transform hover:scale-[1.02]">
+        Back to Practice
+      </a>
+    </div>
+  </div>
+
+
+  <!-- Modal -->
+  <div id="message-modal" class="fixed inset-0 bg-gray-600 bg-opacity-75 hidden items-center justify-center p-4 z-50">
+    <div class="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full transition-all duration-300 transform scale-100">
+      <h4 id="modal-title" class="text-xl font-bold mb-3 text-gray-800"></h4>
+      <p id="modal-body" class="mb-5 text-gray-600"></p>
+      <div class="flex justify-end">
+        <button id="modal-confirm-btn" class="bg-primary hover:bg-primary-light text-white font-semibold py-2 px-4 rounded-lg transition duration-150">
+          OK
+        </button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- JS Logic -->
+  <script>
+    function showModal(title, body, onConfirm = null) {
+      const modal = document.getElementById("message-modal");
+      const modalTitle = document.getElementById("modal-title");
+      const modalBody = document.getElementById("modal-body");
+      const modalConfirmBtn = document.getElementById("modal-confirm-btn");
+
+      modalTitle.textContent = title;
+      modalBody.textContent = body;
+
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+
+      modalConfirmBtn.onclick = () => {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        if (onConfirm) onConfirm();
+      };
+    }
+
+
+    document.addEventListener('DOMContentLoaded', () => {
+      
+      document.getElementById('ocr-text').textContent = ocrText;
+      document.getElementById('spelling-errors').textContent = spellingErrors;
+      document.getElementById('chosen-level').textContent = currentLevel;
+      document.getElementById('annotated-image').src = `data:image/png;base64,${annotatedImageBase64}`;
+
+      /* FEEDBACK */
+      document.getElementById('feedback-box').textContent = feedbackMessage;
+
+
+      // Clean reversal stats
+      const reversalStatsEl = document.getElementById('reversal-stats');
+      let cleanStats = reversalStats
+        .replaceAll("&#39;", "'")
+        .replaceAll("{", "")
+        .replaceAll("}", "")
+        .replaceAll("'", "")
+        .replaceAll(",", "\n")
+        .trim();
+      reversalStatsEl.textContent = cleanStats;
+
+      // Match message
+      const matchMessageEl = document.getElementById('match-message');
+      if (matches_target) {
+        matchMessageEl.innerHTML = '✅ <b class="text-success">Sentence Match:</b> Great job! Your writing is highly accurate.';
+        matchMessageEl.classList.add('bg-green-100', 'border-success', 'border-l-4');
+      } else {
+        matchMessageEl.innerHTML = '❌ <b class="text-error">Sentence Mismatch:</b> The written sentence needs more practice.';
+        matchMessageEl.classList.add('bg-red-100', 'border-error', 'border-l-4');
+      }
+
+      // Reversed letters
+      const reversedLettersListEl = document.getElementById('reversed-letters-list');
+      const reversedLettersBoxEl = document.getElementById('reversed-letters-box');
+      if (reversedLetters && reversedLetters.length > 0) {
+        reversedLettersListEl.textContent = reversedLetters.join(', ').toUpperCase();
+        reversedLettersBoxEl.classList.add('bg-error/10', 'border-error');
+        reversedLettersListEl.classList.add('text-error');
+      } else {
+        reversedLettersListEl.textContent = 'None detected!';
+        reversedLettersBoxEl.classList.add('bg-success/10', 'border-success');
+        reversedLettersListEl.classList.add('text-success');
+      }
+
+      // Flashcards logic
+      document.getElementById("flashcard-btn").addEventListener("click", () => {
+        if (reversedLetters && reversedLetters.length > 0) {
+          const param = reversedLetters.join(",");
+          showModal("Practice Time!",
+            `We found ${reversedLetters.length} reversed letters (${reversedLetters.join(', ').toUpperCase()}). Let's practice them now!`,
+            () => window.location.href = `/flashcards?letters=${param}`
+          );
+        } else {
+          showModal("Congratulations!", "🎉 Great job! No reversed letters were detected. Keep up the excellent work!");
+        }
+      });
+    });
+  </script>
+
+</body>
+</html>

@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Pick Avatar</title>
+</head>
+<body>
+<h2>Select Avatar</h2>
+
+<form method="POST">
+    {% for avatar in avatars %}
+        <label>
+            <input type="radio" name="avatar" value="{{ avatar }}">
+            <img src="/static/avatars/{{ avatar }}" width="80">
+        </label>
+    {% endfor %}
+    <button type="submit">Save Avatar</button>
+</form>
+
+</body>
+</html>

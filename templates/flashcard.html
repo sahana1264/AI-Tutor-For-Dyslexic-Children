@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Mirror Letter Trainer</title>
+  <style>
+    body {
+      font-family: "Comic Sans MS", Arial, sans-serif;
+      text-align: center;
+      background: linear-gradient(to bottom right, #dff9fb, #c7ecee);
+      margin: 0;
+      padding: 40px;
+      color: #2c3e50;
+    }
+
+    h1 { font-size: 40px; color: #0984e3; margin-bottom: 10px; }
+
+    #flashcard {
+      font-size: 120px;
+      margin: 40px auto 20px;
+      background: white;
+      width: 150px; height: 150px;
+      display: flex; justify-content: center; align-items: center;
+      border-radius: 20px; box-shadow: 0 6px 15px rgba(0,0,0,0.1);
+    }
+
+    .option-button {
+      font-size: 40px; padding: 10px 25px; margin: 15px;
+      cursor: pointer; border: none; border-radius: 15px;
+      background: #74b9ff; color: white;
+      transition: transform 0.2s, background 0.3s;
+    }
+
+    .option-button:hover { background: #0984e3; transform: scale(1.1); }
+
+    #feedback { font-size: 30px; font-weight: bold; margin-top: 20px; height: 40px; }
+    #score { font-size: 22px; margin-top: 15px; color: #2d3436; }
+    #progress-bar { width: 80%; background: #dfe6e9; border-radius: 15px; margin: 20px auto; height: 25px; overflow: hidden; }
+    #progress-fill { width: 0%; height: 100%; background: #55efc4; transition: width 0.4s ease; }
+    #timer { font-size: 22px; margin-top: 15px; color: #636e72; }
+    #end-message { font-size: 26px; margin-top: 30px; color: #0984e3; font-weight: bold; }
+  </style>
+</head>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    // Start the timer only once (when session first starts)
+    if (!sessionStorage.getItem("sessionStartTime")) {
+        sessionStorage.setItem("sessionStartTime", Date.now());
+    }
+    startGlobalTimer();
+});
+
+function startGlobalTimer() {
+    const LIMIT = 25 * 60; // 25 minutes
+
+    setInterval(() => {
+        const start = parseInt(sessionStorage.getItem("sessionStartTime"));
+        const elapsed = Math.floor((Date.now() - start) / 1000);
+        const remaining = LIMIT - elapsed;
+
+        // Optional: Show timer if element exists on page
+        const display = document.getElementById("timer-display");
+        if (display) {
+            const min = Math.floor(remaining / 60);
+            const sec = remaining % 60;
+            display.textContent = `⏳ Time Left: ${min}:${sec.toString().padStart(2, '0')}`;
+        }
+
+        // When time finishes
+        if (remaining <= 0) {
+            sessionStorage.removeItem("sessionStartTime");
+            alert("⏰ Practice Time Over! Redirecting...");
+            window.location.href = "/home";  // Or "/login"
+        }
+    }, 1000);
+}
+</script>
+
+<body>
+  <h1>🧩 Letter Reversal Practice</h1>
+  <div id="timer-display">⏳ Time left: 15:00</div>
+
+  <div id="flashcard">?</div>
+  <div id="buttons"></div>
+  <div id="feedback"></div>
+  <div id="progress-bar"><div id="progress-fill"></div></div>
+  <div id="score"></div>
+  <div id="end-message"></div>
+
+
+  <canvas id="traceCanvas" width="300" height="300" 
+  style="display:none; border:2px solid #0984e3; border-radius:15px; background:white; margin:20px auto;">
+</canvas>
+  <script>
+  let reversedLetters = [];
+  try {
+    reversedLetters = JSON.parse('{{ reversed_letters | tojson | safe }}');
+  } catch (err) {
+    console.error("Error loading reversed letters:", err);
+    reversedLetters = [];
+  }
+
+  if (reversedLetters.length === 0) {
+    reversedLetters = ['b', 'd', 'p', 'q', 'm', 'w', 'n', 'u', 'y', 'h', 'k'];
+  }
+
+  const mirrorSets = {
+    'b': ['b', 'd'], 'd': ['b', 'd'],
+    'p': ['p', 'q'], 'q': ['p', 'q'],
+    'm': ['m', 'w'], 'w': ['m', 'w'],
+    'n': ['n', 'u'], 'u': ['n', 'u'],
+    'y': ['y', 'γ'], 'h': ['h', 'ɥ'], 
+    'k': ['k', 'ʞ'],'a' :['a','ɒ'],
+    's':['s','z'],'z':['z','s']
+
+  };
+
+  const flashcard = document.getElementById('flashcard');
+  const feedback = document.getElementById('feedback');
+  const scoreBoard = document.getElementById('score');
+  const buttonContainer = document.getElementById('buttons');
+  const progressFill = document.getElementById('progress-fill');
+  const endMessage = document.getElementById('end-message');
+  const timerDisplay = document.getElementById('timer');
+
+  let score = 0, total = 0, current = 0, loopCount = 1;
+  const MAX_LOOPS = 1; // 🔁 repeat full set 3 times
+  let deck = [...reversedLetters];
+
+  // Shuffle helper
+  function shuffle(arr) { return arr.sort(() => Math.random() - 0.5); }
+
+  // --------------------------
+  // GLOBAL SESSION TIMER
+  // --------------------------
+ 
+
+  // --------------------------
+  // Flashcard Logic
+  // --------------------------
+  function loadCard() {
+  if (current >= deck.length) {
+    // End of one full round
+    if (loopCount < MAX_LOOPS) {
+      loopCount++;
+      current = 0;
+      deck = shuffle([...reversedLetters]); // new shuffle each round
+      loadCard();
+    } else {
+      endSession();
+    }
+    return;
+  }
+
+  const letter = deck[current];
+  const options = mirrorSets[letter] || [letter];
+  flashcard.innerText = letter;
+  buttonContainer.innerHTML = '';
+  feedback.innerText = '';
+  scoreBoard.innerText = `⭐ Score: ${score}/${total}`;
+  progressFill.style.width = `${(current / deck.length) * 100}%`;
+
+  // If letter is part of a mirror pair → show options
+  if (mirrorSets[letter]) {
+    document.getElementById("traceCanvas").style.display = "none";
+
+    options.forEach(opt => {
+      const btn = document.createElement('button');
+      btn.innerText = opt;
+      btn.className = 'option-button';
+      btn.onclick = () => checkAnswer(opt, letter);
+      buttonContainer.appendChild(btn);
+    });
+  } 
+  // Otherwise → show tracing mode
+  else {
+    buttonContainer.innerHTML = '';
+    showTracingCanvas(letter);
+  }
+}
+
+function checkAnswer(ans, letter) {
+  total++;
+  if (ans === letter) {
+    feedback.innerText = "🎉 Correct!";
+    feedback.style.color = "green";
+    score++;
+  } else {
+    feedback.innerText = `❌ It was "${letter}"`;
+    feedback.style.color = "red";
+  }
+  current++;
+  setTimeout(loadCard, 700);
+}
+
+// ======== ✏️ Tracing Canvas ========
+function showTracingCanvas(letter) {
+  const canvas = document.getElementById("traceCanvas");
+  const ctx = canvas.getContext("2d");
+  canvas.style.display = "block";
+
+  // Clear and write target letter faintly
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.font = "200px Comic Sans MS";
+  ctx.fillStyle = "rgba(0,0,0,0.1)";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(letter, canvas.width / 2, canvas.height / 2);
+
+  let drawing = false;
+  ctx.strokeStyle = "#0984e3";
+  ctx.lineWidth = 5;
+  ctx.lineCap = "round";
+
+  canvas.onmousedown = () => (drawing = true);
+  canvas.onmouseup = () => { drawing = false; ctx.beginPath(); };
+  canvas.onmousemove = (e) => {
+    if (!drawing) return;
+    const rect = canvas.getBoundingClientRect();
+    ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
+  };
+
+  // ✅ After tracing for a few seconds, auto-move to next card
+  setTimeout(() => {
+    current++;
+    canvas.style.display = "none";
+    loadCard();
+  }, 15000);
+}
+
+  function endSession() {
+    flashcard.innerText = '🏁';
+    buttonContainer.innerHTML = '';
+    feedback.innerText = '';
+    progressFill.style.width = '100%';
+    scoreBoard.innerText = `Final Score: ${score}/${total}`;
+    endMessage.innerHTML = `<b>✅ Flashcard session done!</b><br>Redirecting to main page...`;
+
+    setTimeout(() => {
+      window.location.href = "/index";
+    }, 4000);
+  }
+
+  loadCard();
+</script>
+
+</body>
+</html>

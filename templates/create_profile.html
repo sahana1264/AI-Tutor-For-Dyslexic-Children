@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Create Profile</title>
+
+    <style>
+        body {
+            font-family: 'Poppins', Arial, sans-serif;
+            background: linear-gradient(to bottom right, #a8d8ff, #e3f2fd);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .card {
+            background: white;
+            width: 420px;
+            padding: 35px;
+            border-radius: 25px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+            text-align: center;
+        }
+
+        h2 {
+            color: #1565c0;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        p {
+            color: #444;
+            font-size: 15px;
+            margin-bottom: 25px;
+        }
+
+        input {
+            width: 90%;
+            padding: 12px;
+            border-radius: 12px;
+            border: 1.5px solid #b0bec5;
+            margin-top: 15px;
+            font-size: 15px;
+            transition: 0.2s;
+        }
+
+        input:focus {
+            border-color: #1565c0;
+            outline: none;
+            box-shadow: 0 0 5px rgba(21,101,192,0.3);
+        }
+
+        .avatar-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin-top: 20px;
+            padding: 10px;
+        }
+
+        .avatar {
+            width: 70px;
+            height: 70px;
+            border-radius: 15px;
+            cursor: pointer;
+            border: 3px solid transparent;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.15);
+            transition: 0.2s;
+        }
+
+        .avatar:hover {
+            transform: scale(1.08);
+            border-color: #1565c0;
+        }
+
+        .selected-avatar {
+            border-color: #0d47a1 !important;
+            transform: scale(1.12) !important;
+        }
+
+        button {
+            margin-top: 25px;
+            padding: 12px 30px;
+            background: #1565c0;
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-size: 17px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        button:hover {
+            background: #0d47a1;
+        }
+
+        .warning {
+            color: red;
+            margin-top: 10px;
+            font-size: 14px;
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="card">
+    <h2>Create Your Profile</h2>
+    <p>Pick your name and choose an avatar to start!</p>
+
+    <form method="POST" onsubmit="return validateForm()">
+
+        <input type="text" name="name" placeholder="Enter Name" required>
+        <input type="password" name="password" placeholder="Enter Password" required
+         class="w-full p-3 mt-2 border rounded-lg"/>
+
+
+        <input type="hidden" name="avatar" id="avatar_input">
+
+        <h3 style="color:#1565c0; margin-top:25px;">Choose an Avatar</h3>
+
+        <div class="avatar-grid">
+            {% for avatar in avatars %}
+                <img src="{{ url_for('static', filename='avatars/' + avatar) }}"
+                     class="avatar"
+                     id="a_{{ loop.index }}"
+                     onclick="selectAvatar('{{ avatar }}', 'a_{{ loop.index }}')">
+            {% endfor %}
+        </div>
+
+        <p id="warning" class="warning">⚠ Please select an avatar!</p>
+
+        <button type="submit">Create Profile</button>
+    </form>
+</div>
+
+<script>
+let selected = null;
+
+function selectAvatar(avatarName, elementId) {
+    document.getElementById("avatar_input").value = avatarName;
+
+    if (selected) {
+        selected.classList.remove("selected-avatar");
+    }
+
+    const element = document.getElementById(elementId);
+    element.classList.add("selected-avatar");
+
+    selected = element;
+
+    document.getElementById("warning").style.display = "none";
+}
+
+function validateForm() {
+    if (document.getElementById("avatar_input").value === "") {
+        document.getElementById("warning").style.display = "block";
+        return false;
+    }
+    return true;
+}
+</script>
+
+</body>
+</html>

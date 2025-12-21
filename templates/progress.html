@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Progress</title>
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body class="p-4 bg-light">
+
+<div class="container">
+
+    <!-- TOP BUTTONS -->
+    <div class="d-flex justify-content-end mb-3">
+        <a href="/home" class="btn btn-primary me-2">🏠 Home</a>
+        <a href="/login" class="btn btn-danger">🔑 Logout</a>
+    </div>
+
+    <h2 class="text-center mb-4">📊 Your Progress Dashboard</h2>
+
+    <!-- AVERAGE CARDS -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="p-3 bg-white shadow rounded text-center">
+                <h5>Average Spelling Errors</h5>
+                <h2>{{ avg_spelling }}</h2>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="p-3 bg-white shadow rounded text-center">
+                <h5>Average Reversal Errors</h5>
+                <h2>{{ avg_reversal }}</h2>
+            </div>
+        </div>
+    </div>
+
+    <!-- GRAPH 1 -->
+    <div class="card shadow mb-4 p-3">
+        <h5 class="text-center">📈 Error Trend Over Time</h5>
+        <canvas id="errorChart"></canvas>
+    </div>
+
+    <!-- GRAPH 2 -->
+    <div class="card shadow mb-4 p-3">
+        <h5 class="text-center">📊 Sessions Completed Per Day</h5>
+        <canvas id="sessionChart"></canvas>
+    </div>
+
+    <!-- SESSIONS TABLE -->
+    {% if sessions|length == 0 %}
+        <p class="text-center text-muted">No practice sessions recorded yet.</p>
+    {% else %}
+        <table class="table table-striped table-bordered bg-white shadow">
+            <thead class="table-primary">
+            <tr>
+                <th>#</th>
+                <th>Sentence</th>
+                <th>Spelling Errors</th>
+                <th>Reversal Errors</th>
+                <th>Reversed Letters</th>
+                <th>Timestamp</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for s in sessions %}
+            <tr>
+                <td>{{ loop.index }}</td>
+                <td>{{ s.sentence }}</td>
+                <td>{{ s.spelling_errors }}</td>
+                <td>{{ s.reversal_errors }}</td>
+                <td>{{ s.reversed_letters }}</td>
+                <td>{{ s.timestamp }}</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    {% endif %}
+
+</div>
+
+<script>
+    const sessionsData = JSON.parse(`{{ sessions|tojson|safe }}`);
+    console.log(sessionsData);
+
+    const labels = sessionsData.map(s => s.timestamp.split(" ")[0]);
+    const spelling = sessionsData.map(s => s.spelling_errors);
+    const reversal = sessionsData.map(s => s.reversal_errors);
+
+    const ctx1 = document.getElementById("errorChart");
+    new Chart(ctx1, {
+        type: "line",
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: "Spelling Errors",
+                    data: spelling,
+                    borderWidth: 3,
+                    borderColor: "#007bff",
+                    fill: false
+                },
+                {
+                    label: "Reversal Errors",
+                    data: reversal,
+                    borderWidth: 3,
+                    borderColor: "#dc3545",
+                    fill: false
+                }
+            ]
+        }
+    });
+
+    const counts = {};
+    labels.forEach(date => counts[date] = (counts[date] || 0) + 1);
+
+    const dayLabels = Object.keys(counts);
+    const dayValues = Object.values(counts);
+
+    const ctx2 = document.getElementById("sessionChart");
+    new Chart(ctx2, {
+        type: "bar",
+        data: {
+            labels: dayLabels,
+            datasets: [{
+                label: "Sessions",
+                data: dayValues,
+                backgroundColor: "#17a2b8",
+                borderWidth: 2
+            }]
+        }
+    });
+</script>
+
+</body>
+</html>

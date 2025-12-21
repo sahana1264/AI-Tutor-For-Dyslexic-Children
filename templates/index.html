@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Dyslexia Learning Tool</title>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/gh/antijingoist/open-dyslexic@1.0.1/open-dyslexic.css">
+
+    <style>
+        body, h1, h2, p, button, input {
+            font-family: "OpenDyslexic", Arial, sans-serif !important;
+        }
+
+        /* 🌤 Softer, warm background */
+        body {
+            background: #f3f3f5;
+            color: #2e3a4a;
+        }
+
+        /* 🎴 Soft, gentle card style */
+        .card {
+            background: #ffffffee;
+            padding: 22px;
+            border-radius: 18px;
+            backdrop-filter: blur(6px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.06);
+        }
+
+        /* ⭐ Softer blue + pastel purple buttons */
+        .btn-primary {
+            background: #6e87d6;     /* muted blue */
+            color: white;
+            border-radius: 12px;
+            padding: 11px 20px;
+            font-weight: bold;
+        }
+        .btn-primary:hover {
+            background: #5a79c8;
+        }
+
+        .btn-alt {
+            background: #8b78e6;      /* calming lavender */
+            color: white;
+            border-radius: 12px;
+            padding: 11px 20px;
+            font-weight: bold;
+        }
+        .btn-alt:hover {
+            background: #7b6ad5;
+        }
+
+        .btn-danger {
+            background: #d96464;
+            color: white;
+            border-radius: 12px;
+            padding: 11px 20px;
+            font-weight: bold;
+        }
+        .btn-danger:hover {
+            background: #c55252;
+        }
+
+        /* Subtle sentence highlight */
+        .glow {
+            border: 2px solid #6e87d6;
+            background: #eef0fa;
+        }
+    </style>
+</head>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    // Start the timer only once (when session first starts)
+    if (!sessionStorage.getItem("sessionStartTime")) {
+        sessionStorage.setItem("sessionStartTime", Date.now());
+    }
+    startGlobalTimer();
+});
+
+function startGlobalTimer() {
+    const LIMIT = 25 * 60; // 25 minutes
+
+    setInterval(() => {
+        const start = parseInt(sessionStorage.getItem("sessionStartTime"));
+        const elapsed = Math.floor((Date.now() - start) / 1000);
+        const remaining = LIMIT - elapsed;
+
+        // Optional: Show timer if element exists on page
+        const display = document.getElementById("timer-display");
+        if (display) {
+            const min = Math.floor(remaining / 60);
+            const sec = remaining % 60;
+            display.textContent = `⏳ Time Left: ${min}:${sec.toString().padStart(2, '0')}`;
+        }
+
+        // When time finishes
+        if (remaining <= 0) {
+            sessionStorage.removeItem("sessionStartTime");
+            alert("⏰ Practice Time Over! Redirecting...");
+            window.location.href = "/home";  // Or "/login"
+        }
+    }, 1000);
+}
+</script>
+
+<body>
+
+<!-- ⛅ Softer Nav Bar -->
+<nav class="w-full bg-white shadow-md px-6 py-4 flex justify-between items-center sticky top-0 z-50 rounded-b-2xl">
+    <h1 class="text-2xl font-bold text-slate-700 tracking-wide">🔡 Dyslexia Learning Tool</h1>
+
+    <div class="flex gap-4">
+        <a href="/home" class="btn-primary">🏠 Home</a>
+        <a href="/progress" class="btn-alt">📊 Progress</a>
+        <a href="/login" class="btn-danger">🔑 Logout</a>
+    </div>
+</nav>
+<div id="timer-display" class="text-center text-lg font-bold text-red-600 mb-4"></div>
+
+<div class="max-w-3xl mx-auto mt-8 px-4">
+
+    <!-- Sentence Box -->
+    <div class="card mb-6">
+        <h2 class="text-xl font-bold mb-3 text-slate-700">✏️ Practice Sentence</h2>
+
+        <div id="sentence-box"
+             class="text-xl font-bold text-center glow p-5 rounded-xl">
+            Loading...
+        </div>
+
+        <button id="new-sentence-btn"
+                class="btn-primary w-full mt-5">
+            🔄 New Sentence
+        </button>
+    </div>
+
+    <!-- Upload Section -->
+    <div class="card mb-6">
+        <h2 class="text-xl font-bold text-slate-700 mb-3">📤 Upload Your Handwriting</h2>
+
+        <form id="upload-form"
+              class="mt-3"
+              action="/process"
+              method="POST"
+              enctype="multipart/form-data">
+
+            <input type="file"
+                   name="image"
+                   accept="image/*"
+                   required
+                   class="w-full p-3 border rounded-lg bg-white shadow-sm mb-4">
+
+            <button class="btn-alt w-full">
+                ✔ Submit
+            </button>
+        </form>
+    </div>
+
+    <!-- Chatbot -->
+    <div class="card mb-10">
+        <h2 class="text-xl font-bold text-slate-700 mb-3">🤖 Learning Assistant</h2>
+
+        <div id="chat-box"
+             class="p-4 border rounded-xl h-64 overflow-y-auto bg-gray-100 shadow-inner">
+            <p class="italic text-gray-500">Chatbot ready to help!</p>
+        </div>
+
+        <form id="chat-form" class="flex gap-3 mt-3">
+            <input id="chat-input"
+                   type="text"
+                   placeholder="Ask something..."
+                   class="flex-1 p-3 border rounded-xl shadow-sm">
+            <button id="send-btn"
+                    class="btn-primary px-5">
+                Send
+            </button>
+        </form>
+    </div>
+
+</div>
+
+<!-- Alert System (unchanged) -->
+<div id="custom-alert-modal"
+     class="fixed inset-0 hidden items-center justify-center bg-black bg-opacity-40 z-[2000]">
+    <div class="bg-white p-6 rounded-xl max-w-sm text-center shadow-xl">
+        <p id="alert-message-text" class="text-lg mb-4"></p>
+        <button onclick="document.getElementById('custom-alert-modal').style.display='none'"
+                class="btn-primary w-full">
+            OK
+        </button>
+    </div>
+</div>
+
+
+<!-- ====================== JAVASCRIPT ====================== -->
+<script>
+function customAlert(message) {
+    document.getElementById("alert-message-text").innerText = message;
+    document.getElementById("custom-alert-modal").style.display = "flex";
+}
+
+// ------------------- Session Timer -------------------
+
+
+
+// ------------------- Chatbot -------------------
+document.getElementById("chat-form").onsubmit = async function (e) {
+    e.preventDefault();
+    const input = document.getElementById("chat-input");
+    const message = input.value.trim();
+    if (!message) return;
+
+    const chatBox = document.getElementById("chat-box");
+
+    chatBox.innerHTML += `<p><b>You:</b> ${message}</p>`;
+    input.value = "";
+    chatBox.scrollTop = chatBox.scrollHeight;
+
+    chatBox.innerHTML += `<p id="loading">Bot is typing...</p>`;
+
+    try {
+        const res = await fetch("chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message })
+        });
+
+        const data = await res.json();
+        document.getElementById("loading").remove();
+
+        const reply = data.reply || "No reply.";
+        chatBox.innerHTML += `<p><b>Bot:</b> ${reply}</p>`;
+        chatBox.scrollTop = chatBox.scrollHeight;
+
+        if (reply.endsWith(".")) {
+            document.getElementById("sentence-box").innerText = reply;
+            sessionStorage.setItem("currentSentence", reply);
+        }
+
+    } catch (err) {
+        document.getElementById("loading").remove();
+        chatBox.innerHTML += `<p><b>Bot:</b> Error occurred.</p>`;
+    }
+};
+
+
+// ------------------- Fetch Sentence -------------------
+async function fetchSentence() {
+    document.getElementById("sentence-box").innerText = "Generating...";
+    try {
+        const res = await fetch("get_sentence");
+        const data = await res.json();
+        const s = data.sentence;
+
+        document.getElementById("sentence-box").innerText = s;
+        sessionStorage.setItem("currentSentence", s);
+    } catch {
+        customAlert("Could not load a new sentence.");
+    }
+}
+
+document.getElementById("new-sentence-btn").onclick = fetchSentence;
+
+if (!sessionStorage.getItem("currentSentence")) {
+    fetchSentence();
+} else {
+    document.getElementById("sentence-box").innerText =
+        sessionStorage.getItem("currentSentence");
+}
+
+
+// ------------------- Upload Form -------------------
+document.getElementById("upload-form").onsubmit = function () {
+    let old = document.getElementById("expected-sentence-input");
+    if (old) old.remove();
+
+    const sentence = sessionStorage.getItem("currentSentence");
+    const hidden = document.createElement("input");
+    hidden.type = "hidden";
+    hidden.name = "expected_sentence";
+    hidden.value = sentence;
+    hidden.id = "expected-sentence-input";
+
+    this.appendChild(hidden);
+};
+</script>
+
+</body>
+</html>
